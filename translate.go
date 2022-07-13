@@ -72,7 +72,6 @@ type translation struct {
 }
 
 func (c *Client) Translate(ctx context.Context, params TranslateParams) (string, error) {
-	params.Text = strings.Replace(params.Text, "。", ".", -1)
 	c.Context = ctx
 	u, err := url.Parse(c.baseURL.String() + "translate")
 	if err != nil {
@@ -85,6 +84,8 @@ func (c *Client) Translate(ctx context.Context, params TranslateParams) (string,
 	}
 
 	req.Header = c.header
+
+	params.Text = strings.Replace(params.Text, "。", ".", -1)
 
 	q := req.URL.Query()
 	if params.Text == "" {
