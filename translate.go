@@ -37,4 +37,34 @@ const (
 	Chinese
 )
 
+type splitSentence string
+
+const (
+	NoSplit    splitSentence = "0"
+	Default                  = "1"
+	Nonewlines               = "nonewlines"
+)
+
+type preserveFormatting string
+
+const (
+	NoPreserveFormat preserveFormatting = "0"
+	PreserveFormat                      = "1"
+)
+
+type TranslateParams struct {
+	Text               string
+	SourceLang         lang
+	TargetLang         string
+	SplitSentences     splitSentence
+	PreserveFormatting preserveFormatting
+}
+type response struct {
+	Translations []translation `json:"translations"`
+}
+
+type translation struct {
+	Language string `json:"detected_source_language"`
+	Text     string `json:"text"`
+}
 
