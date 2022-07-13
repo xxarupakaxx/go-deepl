@@ -1,5 +1,14 @@
 package deepl
 
+import (
+	"context"
+	"encoding/json"
+	"io/ioutil"
+	"net/http"
+	"net/url"
+	"strings"
+)
+
 type lang int32
 
 const (
@@ -60,6 +69,90 @@ type response struct {
 type translation struct {
 	Language string `json:"detected_source_language"`
 	Text     string `json:"text"`
+}
+
+func (c *Client) Translate(ctx context.Context, params TranslateParams) (string, error) {
+	params.Text = strings.Replace(params.Text, "。", ".", -1)
+	c.Context = ctx
+	u, err := url.Parse(c.baseURL.String() + "translate")
+	if err != nil {
+		return "", err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, u.String(), nil)
+	if err != nil {
+		return "", err
+	}
+
+	req.Header = c.header
+
+	q := req.URL.Query()
+	if params.Text == "" {
+		return "", ErrNilText
+	}
+	if params.TargetLang == "" {
+		return "", ErrNilTargetLang
+	}
+
+	q.Add("target_lang", params.TargetLang)
+	q.Add("text", params.Text)
+
+	if params.SourceLang != 0 {
+		q.Add("source_lang", c.convertLang(params.SourceLang))
+	}
+	if params.PreserveFormatting != "" {
+		q.Add("preserve_formatting", string(params.PreserveFormatting))
+	}
+	if params.SplitSentences != "" {
+		q.Add("split_sentences", string(params.SplitSentences))
+	}
+
+	req.URL.RawQuery = q.Encode()
+
+	res, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return "", err
+	}
+	defer res.Body.Close()
+
+	if res.StatusCode == http.StatusRequestEntityTooLarge {
+		splitText := strings.Split(params.Text, ".")
+		for i, s := range splitText {
+			if i == 0 {
+				q.Set("text", s)
+			} else {
+				q.Add("text", s)
+			}
+		}
+
+		req.URL.RawQuery = q.Encode()
+
+		res, err = http.DefaultClient.Do(req)
+		if err != nil {
+			return "", err
+		}
+	}
+
+	body, err := ioutil.ReadAll(res.Body)
+	if err != nil {
+		return "", err
+	}
+
+	var data response
+	if err = json.Unmarshal(body, &data); err != nil {
+		return "", err
+	}
+
+	if len(data.Translations) >= 2 {
+		var text string
+		for _, t := range data.Translations {
+			text += t.Text
+		}
+
+		return text, nil
+	}
+
+	return data.Translations[0].Text, nil
 }
 
 func (c *Client) convertLang(lang lang) string {
