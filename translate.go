@@ -1,11 +1,5 @@
 package deepl
 
-import (
-	"context"
-	"net/http"
-	"net/url"
-)
-
 type lang int32
 
 const (
@@ -68,3 +62,61 @@ type translation struct {
 	Text     string `json:"text"`
 }
 
+func (c *Client) convertLang(lang lang) string {
+	switch lang {
+	case Bulgarian:
+		return "BG"
+	case Chinese:
+		return "ZH"
+	case Czech:
+		return "CS"
+	case Danish:
+		return "DA"
+	case Dutch:
+		return "NL"
+	case English:
+		return "EN"
+	case Estonian:
+		return "ET"
+	case Finnish:
+		return "FI"
+	case French:
+		return "FR"
+	case German:
+		return "DE"
+	case Greek:
+		return "EL"
+	case Hungarian:
+		return "HU"
+	case Indonesian:
+		return "ID"
+	case Italian:
+		return "IT"
+	case Japanese:
+		return "JA"
+	case Latvian:
+		return "LV"
+	case Lithuanian:
+		return "LT"
+	case Polish:
+		return "PL"
+	case Portuguese:
+		return "PT"
+	case Romanian:
+		return "RO"
+	case Russian:
+		return "RU"
+	case Slovak:
+		return "SK"
+	case Slovenian:
+		return "SL"
+	case Spanish:
+		return "ES"
+	case Swedish:
+		return "SV"
+	case Turkish:
+		return "TR"
+	default:
+		return ""
+	}
+}
