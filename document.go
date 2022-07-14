@@ -240,11 +240,8 @@ func (c *Client) GetResult(documentID, documentKey string) (string, error) {
 	return string(body), nil
 }
 
-func (c *Client) GetTranslatedDocument(filepath string, targetLang lang) error {
-	data, err := c.translateDocument(DocumentParams{
-		TargetLang: targetLang,
-		File:       filepath,
-	})
+func (c *Client) GetTranslatedDocument(params DocumentParams) error {
+	data, err := c.translateDocument(params)
 
 	if err != nil {
 		return err
@@ -337,7 +334,7 @@ func getTranslatedDocument(body io.Reader) error {
 
 func validateExt(file string) error {
 	ext := filepath.Ext(file)
-	if ext != ".docx" || ext != ".pptx" || ext != ".pdf" || ext != ".html" || ext != ".txt" {
+	if ext != ".docx" && ext != ".pptx" && ext != ".pdf" && ext != ".html" && ext != ".txt" {
 		return errors.New("invalid extension")
 	}
 
