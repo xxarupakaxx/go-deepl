@@ -240,10 +240,13 @@ func (c *Client) GetTranslatedDocument(targetLang lang) error {
 
 func getTranslatedDocument(body io.Reader) error {
 	if _, err := os.Stat("deepl"); os.IsNotExist(err) {
-		os.Mkdir("deepl", os.FileMode(777))
+		os.Mkdir("deepl", 0777)
+		err = os.Chmod("deepl",0777)
+		if err != nil {
+			return err
+		}
 
 	}
-
 	max := 0
 	err := filepath.Walk("deepl", func(path string, info fs.FileInfo, err error) error {
 		if err != nil {
