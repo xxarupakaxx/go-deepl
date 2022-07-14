@@ -326,7 +326,10 @@ func getTranslatedDocument(body io.Reader) error {
 
 	scanner := bufio.NewScanner(body)
 	for scanner.Scan() {
-		f.WriteString(scanner.Text())
+		_, err = f.WriteString(scanner.Text())
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil
