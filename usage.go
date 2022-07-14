@@ -1,7 +1,6 @@
 package deepl
 
 import (
-	"context"
 	"encoding/json"
 	"io/ioutil"
 	"net/http"
@@ -13,8 +12,7 @@ type usageResponse struct {
 	CharacterLimit int `json:"character_limit"`
 }
 
-func (c *Client) CheckCharacterCount(ctx context.Context) (int, error) {
-	c.Context = ctx
+func (c *Client) CheckCharacterCount() (int, error) {
 	u, err := url.Parse(c.baseURL.String() + "usage")
 	if err != nil {
 		return 0, err
@@ -46,8 +44,7 @@ func (c *Client) CheckCharacterCount(ctx context.Context) (int, error) {
 }
 
 
-func (c *Client) CheckCharacterLimit(ctx context.Context) (int, error) {
-	c.Context = ctx
+func (c *Client) CheckCharacterLimit() (int, error) {
 	u, err := url.Parse(c.baseURL.String() + "usage")
 	if err != nil {
 		return 0, err

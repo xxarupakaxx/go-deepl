@@ -14,18 +14,17 @@ const (
 )
 
 type Client struct {
-	context.Context
+	ctx     context.Context
 	header  http.Header
 	baseURL *url.URL
 	plan    plan
 }
 
-func New(accessToken string, plan plan) *Client {
-	ctx := context.Background()
+func New(ctx context.Context, accessToken string, plan plan) *Client {
 	c := &Client{
-		Context: ctx,
-		header:  http.Header{},
-		plan:    plan,
+		ctx:    ctx,
+		header: http.Header{},
+		plan:   plan,
 	}
 
 	if plan == Free {
@@ -34,7 +33,7 @@ func New(accessToken string, plan plan) *Client {
 		c.baseURL, _ = url.Parse("https://api-pro.deepl.com/v2/")
 	}
 
-	c.header.Set("Authorization", "DeepL-Auth-Key " + accessToken)
+	c.header.Set("Authorization", "DeepL-Auth-Key "+accessToken)
 
 	return c
 }

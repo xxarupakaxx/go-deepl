@@ -1,7 +1,6 @@
 package deepl
 
 import (
-	"context"
 	"encoding/json"
 	"io/ioutil"
 	"net/http"
@@ -71,8 +70,7 @@ type translation struct {
 	Text     string `json:"text"`
 }
 
-func (c *Client) Translate(ctx context.Context, params TranslateParams) (string, error) {
-	c.Context = ctx
+func (c *Client) Translate(params TranslateParams) (string, error) {
 	u, err := url.Parse(c.baseURL.String() + "translate")
 	if err != nil {
 		return "", err
