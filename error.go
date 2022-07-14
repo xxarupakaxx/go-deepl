@@ -15,6 +15,6 @@ type ErrMessage struct {
 	Detail  string `json:"detail"`
 }
 
-func (e *ErrMessage) DisplayMessage() string {
-	return fmt.Sprintf("error Message: %s, Details: %s", e.Message, e.Detail)
+func (e *ErrMessage) Error() error {
+	return fmt.Errorf("error Message: %s, Details: %s", e.Message, e.Detail)
 }

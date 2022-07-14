@@ -2,7 +2,6 @@ package deepl
 
 import (
 	"encoding/json"
-	"fmt"
 	"io/ioutil"
 	"net/http"
 	"net/url"
@@ -144,7 +143,7 @@ func (c *Client) Translate(params TranslateParams) (string, error) {
 			return "", err
 		}
 
-		return "", fmt.Errorf("%s", errMessage.DisplayMessage())
+		return "", errMessage.Error()
 	}
 
 	var data response

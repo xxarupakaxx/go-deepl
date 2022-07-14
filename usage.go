@@ -2,7 +2,6 @@ package deepl
 
 import (
 	"encoding/json"
-	"fmt"
 	"io/ioutil"
 	"net/http"
 	"net/url"
@@ -42,7 +41,7 @@ func (c *Client) CheckCharacterCount() (int, error) {
 			return 0, err
 		}
 
-		return 0, fmt.Errorf("%s", errMessage.DisplayMessage())
+		return 0, errMessage.Error()
 	}
 
 	var data usageResponse
@@ -82,7 +81,7 @@ func (c *Client) CheckCharacterLimit() (int, error) {
 			return 0, err
 		}
 
-		return 0, fmt.Errorf("%s", errMessage.DisplayMessage())
+		return 0, errMessage.Error()
 	}
 
 	var data usageResponse
