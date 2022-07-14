@@ -57,7 +57,7 @@ const (
 type TranslateParams struct {
 	Text               string
 	SourceLang         lang
-	TargetLang         string
+	TargetLang         lang
 	SplitSentences     splitSentence
 	PreserveFormatting preserveFormatting
 }
@@ -89,15 +89,15 @@ func (c *Client) Translate(params TranslateParams) (string, error) {
 	if params.Text == "" {
 		return "", ErrNilText
 	}
-	if params.TargetLang == "" {
+	if params.TargetLang == 0 {
 		return "", ErrNilTargetLang
 	}
 
-	q.Add("target_lang", params.TargetLang)
+	q.Add("target_lang",convertLang(params.TargetLang))
 	q.Add("text", params.Text)
 
 	if params.SourceLang != 0 {
-		q.Add("source_lang", c.convertLang(params.SourceLang))
+		q.Add("source_lang", convertLang(params.SourceLang))
 	}
 	if params.PreserveFormatting != "" {
 		q.Add("preserve_formatting", string(params.PreserveFormatting))
@@ -154,7 +154,7 @@ func (c *Client) Translate(params TranslateParams) (string, error) {
 	return data.Translations[0].Text, nil
 }
 
-func (c *Client) convertLang(lang lang) string {
+func convertLang(lang lang) string {
 	switch lang {
 	case Bulgarian:
 		return "BG"
