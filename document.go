@@ -20,12 +20,12 @@ type DocumentParams struct {
 	Filename   string
 }
 
-type DocumentResponse struct {
+type documentResponse struct {
 	DocumentId  string `json:"document_id"`
 	DocumentKey string `json:"document_key"`
 }
 
-func (c *Client) TranslateDocument(params DocumentParams) (*DocumentResponse, error) {
+func (c *Client) TranslateDocument(params DocumentParams) (*documentResponse, error) {
 	u, err := url.Parse(c.baseURL.String() + "document")
 	if err != nil {
 		return nil, err
@@ -78,10 +78,18 @@ func (c *Client) TranslateDocument(params DocumentParams) (*DocumentResponse, er
 		return nil, nil
 	}
 
-	var data DocumentResponse
+	var data documentResponse
 	if err = json.Unmarshal(b, &data); err != nil {
 		return nil, err
 	}
 
 	return &data, nil
+}
+
+func (d *documentResponse) GetDocumentKey() string {
+	return d.DocumentKey
+}
+
+func (d *documentResponse) GetDocumentID() string {
+	return d.DocumentId
 }
