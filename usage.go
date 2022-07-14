@@ -2,6 +2,7 @@ package deepl
 
 import (
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"net/url"
@@ -35,6 +36,15 @@ func (c *Client) CheckCharacterCount() (int, error) {
 		return 0, err
 	}
 
+	if res.StatusCode >= 400 {
+		var errMessage ErrMessage
+		if err = json.Unmarshal(body, &errMessage); err != nil {
+			return 0, err
+		}
+
+		return 0, fmt.Errorf("%s", errMessage.DisplayMessage())
+	}
+
 	var data usageResponse
 	if err = json.Unmarshal(body, &data); err != nil {
 		return 0, err
@@ -42,7 +52,6 @@ func (c *Client) CheckCharacterCount() (int, error) {
 
 	return data.CharacterCount, nil
 }
-
 
 func (c *Client) CheckCharacterLimit() (int, error) {
 	u, err := url.Parse(c.baseURL.String() + "usage")
@@ -65,6 +74,15 @@ func (c *Client) CheckCharacterLimit() (int, error) {
 	body, err := ioutil.ReadAll(res.Body)
 	if err != nil {
 		return 0, err
+	}
+
+	if res.StatusCode >= 400 {
+		var errMessage ErrMessage
+		if err = json.Unmarshal(body, &errMessage); err != nil {
+			return 0, err
+		}
+
+		return 0, fmt.Errorf("%s", errMessage.DisplayMessage())
 	}
 
 	var data usageResponse

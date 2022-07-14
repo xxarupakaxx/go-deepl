@@ -2,6 +2,7 @@ package deepl
 
 import (
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"net/url"
@@ -93,7 +94,7 @@ func (c *Client) Translate(params TranslateParams) (string, error) {
 		return "", ErrNilTargetLang
 	}
 
-	q.Add("target_lang",convertLang(params.TargetLang))
+	q.Add("target_lang", convertLang(params.TargetLang))
 	q.Add("text", params.Text)
 
 	if params.SourceLang != 0 {
@@ -135,6 +136,15 @@ func (c *Client) Translate(params TranslateParams) (string, error) {
 	body, err := ioutil.ReadAll(res.Body)
 	if err != nil {
 		return "", err
+	}
+
+	if res.StatusCode >= 400 {
+		var errMessage ErrMessage
+		if err = json.Unmarshal(body, &errMessage); err != nil {
+			return "", err
+		}
+
+		return "", fmt.Errorf("%s", errMessage.DisplayMessage())
 	}
 
 	var data response

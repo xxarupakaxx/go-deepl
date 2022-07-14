@@ -1,6 +1,9 @@
 package deepl
 
-import "errors"
+import (
+	"errors"
+	"fmt"
+)
 
 var (
 	ErrNilText       = errors.New("text should not nil")
@@ -10,4 +13,8 @@ var (
 type ErrMessage struct {
 	Message string `json:"message"`
 	Detail  string `json:"detail"`
+}
+
+func (e *ErrMessage) DisplayMessage() string {
+	return fmt.Sprintf("error Message: %s, Details: %s", e.Message, e.Detail)
 }
