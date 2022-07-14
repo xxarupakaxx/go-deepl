@@ -107,7 +107,7 @@ type statusResponse struct {
 	SecondsRemaining int    `json:"seconds_remaining"`
 }
 
-func (c *Client) GetStatus(documentID, documentKey string) (string, error) {
+func (c *Client) GetTranslateStatus(documentID, documentKey string) (string, error) {
 	u, err := url.Parse(c.baseURL.String() + "document/" + documentID)
 	if err != nil {
 		return "", err
