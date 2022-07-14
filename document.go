@@ -143,3 +143,44 @@ func (c *Client) GetStatus(documentID, documentKey string) (*statusResponse, err
 
 	return &data, nil
 }
+
+func (c *Client) GetResult(documentID, documentKey string) (string, error) {
+	u, err := url.Parse(c.baseURL.String() + "document/" + documentID + "/result")
+	if err != nil {
+		return "", err
+	}
+
+	authkey, _ := c.GetAuthKey()
+	q := u.Query()
+	q.Add("auth_key", authkey)
+	q.Add("document_key", documentKey)
+
+	u.RawQuery = q.Encode()
+
+	req, err := http.NewRequest(http.MethodPost, u.String(), nil)
+	if err != nil {
+		return "", err
+	}
+
+	res, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return "", err
+	}
+	defer res.Body.Close()
+
+	body, err := ioutil.ReadAll(res.Body)
+	if err != nil {
+		return "", err
+	}
+
+	if res.StatusCode != 200 {
+		var errMessage ErrMessage
+		if err = json.Unmarshal(body, &errMessage); err != nil {
+			return "", err
+		}
+
+		return "", errMessage.Error()
+	}
+
+	return string(body), nil
+}
