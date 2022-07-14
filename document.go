@@ -3,7 +3,6 @@ package deepl
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
 	"io"
 	"io/ioutil"
 	"mime/multipart"
@@ -82,12 +81,63 @@ func (c *Client) TranslateDocument(params DocumentParams) (*documentResponse, er
 			return nil, err
 		}
 
-		fmt.Println(errMessage)
-		return nil, nil
+		return nil, errMessage.Error()
 	}
 
 	var data documentResponse
 	if err = json.Unmarshal(b, &data); err != nil {
+		return nil, err
+	}
+
+	return &data, nil
+}
+
+type statusResponse struct {
+	DocumentId       string `json:"document_id"`
+	Status           string `json:"status"`
+	SecondsRemaining int    `json:"seconds_remaining"`
+}
+
+func (c *Client) GetStatus(documentID, documentKey string) (*statusResponse, error) {
+	u, err := url.Parse(c.baseURL.String() + "document/" + documentID)
+	if err != nil {
+		return nil, err
+	}
+
+	authkey, _ := c.GetAuthKey()
+	q := u.Query()
+	q.Add("auth_key", authkey)
+	q.Add("document_key", documentKey)
+
+	u.RawQuery = q.Encode()
+
+	req, err := http.NewRequest(http.MethodPost, u.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	res, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer res.Body.Close()
+
+	body, err := ioutil.ReadAll(res.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	if res.StatusCode != 200 {
+		var errMessage ErrMessage
+		if err = json.Unmarshal(body, &errMessage); err != nil {
+			return nil, err
+		}
+
+		return nil, errMessage.Error()
+	}
+
+	var data statusResponse
+	if err = json.Unmarshal(body, &data); err != nil {
 		return nil, err
 	}
 
