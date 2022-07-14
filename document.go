@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"encoding/json"
+	"errors"
 	"io"
 	"io/fs"
 	"io/ioutil"
@@ -37,6 +38,11 @@ func (d *documentResponse) GetDocumentID() string {
 
 func (c *Client) TranslateDocument(params DocumentParams) (*documentResponse, error) {
 	u, err := url.Parse(c.baseURL.String() + "document")
+	if err != nil {
+		return nil, err
+	}
+
+	err = validateExt(params.File)
 	if err != nil {
 		return nil, err
 	}
@@ -188,11 +194,10 @@ func (c *Client) GetResult(documentID, documentKey string) (string, error) {
 	return string(body), nil
 }
 
-func (c *Client) GetTranslatedDocument(targetLang lang) error {
+func (c *Client) GetTranslatedDocument(filepath string, targetLang lang) error {
 	data, err := c.TranslateDocument(DocumentParams{
 		TargetLang: targetLang,
-		File:       "a.txt",
-		Filename:   "",
+		File:       filepath,
 	})
 
 	if err != nil {
@@ -241,7 +246,7 @@ func (c *Client) GetTranslatedDocument(targetLang lang) error {
 func getTranslatedDocument(body io.Reader) error {
 	if _, err := os.Stat("deepl"); os.IsNotExist(err) {
 		os.Mkdir("deepl", 0777)
-		err = os.Chmod("deepl",0777)
+		err = os.Chmod("deepl", 0777)
 		if err != nil {
 			return err
 		}
@@ -276,6 +281,15 @@ func getTranslatedDocument(body io.Reader) error {
 	scanner := bufio.NewScanner(body)
 	for scanner.Scan() {
 		f.WriteString(scanner.Text())
+	}
+
+	return nil
+}
+
+func validateExt(file string) error {
+	ext := filepath.Ext(file)
+	if ext != ".docx" || ext != ".pptx" || ext != ".pdf" || ext != ".html" || ext != ".txt" {
+		return errors.New("invalid extension")
 	}
 
 	return nil
