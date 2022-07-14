@@ -1,19 +1,22 @@
 package deepl
 
 import (
+	"bufio"
 	"bytes"
 	"encoding/json"
 	"io"
+	"io/fs"
 	"io/ioutil"
 	"mime/multipart"
 	"net/http"
 	"net/url"
 	"os"
 	"path/filepath"
+	"strconv"
+	"strings"
 )
 
 type DocumentParams struct {
-	SourceLang lang
 	TargetLang lang
 	File       string
 	Filename   string
@@ -183,4 +186,94 @@ func (c *Client) GetResult(documentID, documentKey string) (string, error) {
 	}
 
 	return string(body), nil
+}
+
+func (c *Client) GetTranslatedDocument(targetLang lang) error {
+	data, err := c.TranslateDocument(DocumentParams{
+		TargetLang: targetLang,
+		File:       "a.txt",
+		Filename:   "",
+	})
+
+	if err != nil {
+		return err
+	}
+
+	u, err := url.Parse(c.baseURL.String() + "document/" + data.GetDocumentID() + "/result")
+	if err != nil {
+		return err
+	}
+
+	authkey, _ := c.GetAuthKey()
+	q := u.Query()
+	q.Add("auth_key", authkey)
+	q.Add("document_key", data.GetDocumentKey())
+
+	u.RawQuery = q.Encode()
+
+	req, err := http.NewRequest(http.MethodPost, u.String(), nil)
+	if err != nil {
+		return err
+	}
+
+	res, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return err
+	}
+	defer res.Body.Close()
+
+	if res.StatusCode != 200 {
+		body, err := ioutil.ReadAll(res.Body)
+		if err != nil {
+			return err
+		}
+		var errMessage ErrMessage
+		if err = json.Unmarshal(body, &errMessage); err != nil {
+			return err
+		}
+
+		return errMessage.Error()
+	}
+
+	return getTranslatedDocument(res.Body)
+}
+
+func getTranslatedDocument(body io.Reader) error {
+	if _, err := os.Stat("deepl"); os.IsNotExist(err) {
+		os.Mkdir("deepl", os.FileMode(777))
+
+	}
+
+	max := 0
+	err := filepath.Walk("deepl", func(path string, info fs.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+
+		path = strings.TrimPrefix(path, "deepl/translated_")
+		path = strings.TrimSuffix(path, ".txt")
+		i, _ := strconv.Atoi(path)
+		if i >= max {
+			max = i
+		}
+
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+
+	file := "deepl/translated_" + strconv.Itoa(max+1) + ".txt"
+	f, err := os.Create(file)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	scanner := bufio.NewScanner(body)
+	for scanner.Scan() {
+		f.WriteString(scanner.Text())
+	}
+
+	return nil
 }
