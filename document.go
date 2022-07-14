@@ -25,6 +25,14 @@ type documentResponse struct {
 	DocumentKey string `json:"document_key"`
 }
 
+func (d *documentResponse) GetDocumentKey() string {
+	return d.DocumentKey
+}
+
+func (d *documentResponse) GetDocumentID() string {
+	return d.DocumentId
+}
+
 func (c *Client) TranslateDocument(params DocumentParams) (*documentResponse, error) {
 	u, err := url.Parse(c.baseURL.String() + "document")
 	if err != nil {
@@ -84,12 +92,4 @@ func (c *Client) TranslateDocument(params DocumentParams) (*documentResponse, er
 	}
 
 	return &data, nil
-}
-
-func (d *documentResponse) GetDocumentKey() string {
-	return d.DocumentKey
-}
-
-func (d *documentResponse) GetDocumentID() string {
-	return d.DocumentId
 }
