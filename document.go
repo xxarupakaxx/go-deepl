@@ -199,7 +199,7 @@ func (c *Client) GetTranslationRemainingTime(documentID, documentKey string) (in
 	return data.SecondsRemaining, nil
 }
 
-func (c *Client) GetResult(documentID, documentKey string) (string, error) {
+func (c *Client) GetTranslatedDocumentSentence(documentID, documentKey string) (string, error) {
 	u, err := url.Parse(c.baseURL.String() + "document/" + documentID + "/result")
 	if err != nil {
 		return "", err
