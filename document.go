@@ -15,6 +15,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"time"
 )
 
 type DocumentParams struct {
@@ -246,8 +247,36 @@ func (c *Client) GetTranslatedDocument(params DocumentParams) error {
 	if err != nil {
 		return err
 	}
+	ch := make(chan int)
+	go func(chan<- int) {
+		for true {
+			status, err := c.GetTranslateStatus(data.GetDocumentID(), data.GetDocumentKey())
+			if err != nil {
+				return
+			}
 
-	u, err := url.Parse(c.baseURL.String() + "document/" + data.GetDocumentID() + "/result")
+			if status == "done" {
+				ch <- 0
+				break
+			} else if status == "error" {
+				return
+			}
+
+			time.Sleep(1000 * time.Millisecond)
+		}
+	}(ch)
+
+	select {
+	case <-ch:
+	case <-c.ctx.Done():
+		return c.ctx.Err()
+	}
+
+	return c.getTranslatedDocument(data.GetDocumentID(), data.GetDocumentKey())
+}
+
+func (c *Client) getTranslatedDocument(documentID, documentKey string) error {
+	u, err := url.Parse(c.baseURL.String() + "document/" + documentID + "/result")
 	if err != nil {
 		return err
 	}
@@ -255,7 +284,7 @@ func (c *Client) GetTranslatedDocument(params DocumentParams) error {
 	authkey, _ := c.GetAuthKey()
 	q := u.Query()
 	q.Add("auth_key", authkey)
-	q.Add("document_key", data.GetDocumentKey())
+	q.Add("document_key", documentKey)
 
 	u.RawQuery = q.Encode()
 
@@ -275,6 +304,7 @@ func (c *Client) GetTranslatedDocument(params DocumentParams) error {
 		if err != nil {
 			return err
 		}
+
 		var errMessage ErrMessage
 		if err = json.Unmarshal(body, &errMessage); err != nil {
 			return err
@@ -283,11 +313,7 @@ func (c *Client) GetTranslatedDocument(params DocumentParams) error {
 		return errMessage.Error()
 	}
 
-	return getTranslatedDocument(res.Body)
-}
-
-func getTranslatedDocument(body io.Reader) error {
-	if _, err := os.Stat("deepl"); os.IsNotExist(err) {
+	if _, err = os.Stat("deepl"); os.IsNotExist(err) {
 		os.Mkdir("deepl", 0777)
 		err = os.Chmod("deepl", 0777)
 		if err != nil {
@@ -296,7 +322,7 @@ func getTranslatedDocument(body io.Reader) error {
 
 	}
 	max := 0
-	err := filepath.Walk("deepl", func(path string, info fs.FileInfo, err error) error {
+	err = filepath.Walk("deepl", func(path string, info fs.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
@@ -321,7 +347,7 @@ func getTranslatedDocument(body io.Reader) error {
 	}
 	defer f.Close()
 
-	scanner := bufio.NewScanner(body)
+	scanner := bufio.NewScanner(res.Body)
 	for scanner.Scan() {
 		_, err = f.WriteString(scanner.Text())
 		if err != nil {
