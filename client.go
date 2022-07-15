@@ -45,7 +45,7 @@ func New(ctx context.Context, accessToken string, plan plan) *Client {
 }
 
 func (c *Client) GetAuthKey() (string, error) {
-	v, ok :=c.ctx.Value(auth).(string)
+	v, ok := c.ctx.Value(auth).(string)
 	if !ok {
 		return "", fmt.Errorf("failed to get authkey")
 	}
