@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"io/fs"
 	"io/ioutil"
@@ -37,20 +38,20 @@ func (d *documentResponse) GetDocumentID() string {
 	return d.DocumentId
 }
 
-func (c *Client) translateDocument(params DocumentParams) (*documentResponse, error) {
+func (c *Client) TranslateDocument(params DocumentParams) (string, string, error) {
 	u, err := url.Parse(c.baseURL.String() + "document")
 	if err != nil {
-		return nil, err
+		return "", "", err
 	}
 
 	err = validateExt(params.File)
 	if err != nil {
-		return nil, err
+		return "", "", err
 	}
 
 	file, err := os.Open(params.File)
 	if err != nil {
-		return nil, err
+		return "", "", err
 	}
 	defer file.Close()
 
@@ -60,7 +61,7 @@ func (c *Client) translateDocument(params DocumentParams) (*documentResponse, er
 
 	fw, err := mw.CreateFormFile("file", filepath.Base(params.File))
 	if err != nil {
-		return nil, err
+		return "", "", err
 	}
 
 	_, err = io.Copy(fw, file)
@@ -83,23 +84,23 @@ func (c *Client) translateDocument(params DocumentParams) (*documentResponse, er
 
 	b, err := ioutil.ReadAll(res.Body)
 	if err != nil {
-		return nil, err
+		return "", "", err
 	}
 	if res.StatusCode != 200 {
 		var errMessage ErrMessage
 		if err = json.Unmarshal(b, &errMessage); err != nil {
-			return nil, err
+			return "", "", err
 		}
 
-		return nil, errMessage.Error()
+		return "", "", errMessage.Error()
 	}
 
 	var data documentResponse
 	if err = json.Unmarshal(b, &data); err != nil {
-		return nil, err
+		return "", "", err
 	}
 
-	return &data, nil
+	return data.GetDocumentID(), data.GetDocumentKey(), nil
 }
 
 type statusResponse struct {
@@ -108,13 +109,8 @@ type statusResponse struct {
 	SecondsRemaining int    `json:"seconds_remaining"`
 }
 
-func (c *Client) GetTranslateStatus(params DocumentParams) (string, error) {
-	data, err := c.translateDocument(params)
-	if err != nil {
-		return "", err
-	}
-
-	u, err := url.Parse(c.baseURL.String() + "document/" + data.GetDocumentID())
+func (c *Client) GetTranslateStatus(documentID, documentKey string) (string, error) {
+	u, err := url.Parse(c.baseURL.String() + "document/" + documentID)
 	if err != nil {
 		return "", err
 	}
@@ -122,7 +118,7 @@ func (c *Client) GetTranslateStatus(params DocumentParams) (string, error) {
 	authkey, _ := c.GetAuthKey()
 	q := u.Query()
 	q.Add("auth_key", authkey)
-	q.Add("document_key", data.GetDocumentKey())
+	q.Add("document_key", documentKey)
 
 	u.RawQuery = q.Encode()
 
@@ -152,20 +148,15 @@ func (c *Client) GetTranslateStatus(params DocumentParams) (string, error) {
 	}
 
 	var d statusResponse
-	if err = json.Unmarshal(body, &data); err != nil {
+	if err = json.Unmarshal(body, &d); err != nil {
 		return "", err
 	}
 
 	return d.Status, nil
 }
 
-func (c *Client) GetTranslationRemainingTime(params DocumentParams) (int, error) {
-	data, err := c.translateDocument(params)
-	if err != nil {
-		return 0, err
-	}
-
-	u, err := url.Parse(c.baseURL.String() + "document/" + data.GetDocumentID())
+func (c *Client) GetTranslationRemainingTime(documentID, documentKey string) (int, error) {
+	u, err := url.Parse(c.baseURL.String() + "document/" + documentID)
 	if err != nil {
 		return 0, err
 	}
@@ -173,7 +164,7 @@ func (c *Client) GetTranslationRemainingTime(params DocumentParams) (int, error)
 	authkey, _ := c.GetAuthKey()
 	q := u.Query()
 	q.Add("auth_key", authkey)
-	q.Add("document_key", data.GetDocumentKey())
+	q.Add("document_key", documentKey)
 
 	u.RawQuery = q.Encode()
 
@@ -203,20 +194,41 @@ func (c *Client) GetTranslationRemainingTime(params DocumentParams) (int, error)
 	}
 
 	var d statusResponse
-	if err = json.Unmarshal(body, &data); err != nil {
+	if err = json.Unmarshal(body, &d); err != nil {
 		return 0, err
 	}
 
 	return d.SecondsRemaining, nil
 }
 
-func (c *Client) GetTranslatedDocumentSentence(params DocumentParams) (string, error) {
-	data, err := c.translateDocument(params)
-	if err != nil {
-		return "", err
+func (c *Client) GetTranslatedDocumentSentence(documentID, documentKey string) (string, error) {
+	ch := make(chan int)
+	go func(chan<- int) {
+		for true {
+			status, err := c.GetTranslateStatus(documentID, documentKey)
+			if err != nil {
+				return
+			}
+
+			if status == "done" {
+				ch <- 0
+				break
+			} else if status == "error" {
+				return
+			}
+			fmt.Println(status)
+
+			time.Sleep(1000 * time.Millisecond)
+		}
+	}(ch)
+
+	select {
+	case <-ch:
+	case <-c.ctx.Done():
+		return "", c.ctx.Err()
 	}
 
-	u, err := url.Parse(c.baseURL.String() + "document/" + data.GetDocumentID() + "/result")
+	u, err := url.Parse(c.baseURL.String() + "document/" + documentID + "/result")
 	if err != nil {
 		return "", err
 	}
@@ -224,7 +236,7 @@ func (c *Client) GetTranslatedDocumentSentence(params DocumentParams) (string, e
 	authkey, _ := c.GetAuthKey()
 	q := u.Query()
 	q.Add("auth_key", authkey)
-	q.Add("document_key", data.GetDocumentKey())
+	q.Add("document_key", documentKey)
 
 	u.RawQuery = q.Encode()
 
@@ -257,7 +269,7 @@ func (c *Client) GetTranslatedDocumentSentence(params DocumentParams) (string, e
 }
 
 func (c *Client) GetTranslatedDocument(params DocumentParams) error {
-	data, err := c.translateDocument(params)
+	id, key, err := c.TranslateDocument(params)
 	if err != nil {
 		return err
 	}
@@ -265,7 +277,7 @@ func (c *Client) GetTranslatedDocument(params DocumentParams) error {
 	ch := make(chan int)
 	go func(chan<- int) {
 		for true {
-			status, err := c.GetTranslateStatus(params)
+			status, err := c.GetTranslateStatus(id, key)
 			if err != nil {
 				return
 			}
@@ -287,7 +299,7 @@ func (c *Client) GetTranslatedDocument(params DocumentParams) error {
 		return c.ctx.Err()
 	}
 
-	return c.getTranslatedDocument(data.GetDocumentID(), data.GetDocumentKey())
+	return c.getTranslatedDocument(id, key)
 }
 
 func (c *Client) getTranslatedDocument(documentID, documentKey string) error {
