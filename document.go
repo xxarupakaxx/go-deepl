@@ -201,7 +201,12 @@ func (c *Client) GetTranslationRemainingTime(documentID, documentKey string) (in
 	return d.SecondsRemaining, nil
 }
 
-func (c *Client) GetTranslatedDocumentSentence(documentID, documentKey string) (string, error) {
+func (c *Client) GetTranslatedDocumentSentence(params DocumentParams) (string, error) {
+	documentID, documentKey, err := c.TranslateDocument(params)
+	if err != nil {
+		return "", err
+	}
+
 	ch := make(chan int)
 	go func(chan<- int) {
 		for true {
